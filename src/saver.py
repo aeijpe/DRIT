@@ -3,23 +3,21 @@ import torchvision
 from tensorboardX import SummaryWriter
 import numpy as np
 from PIL import Image
+import SimpleITK as sitk
+import torch 
 
-# tensor to PIL Image
-def tensor2img(img):
-  img = img[0].cpu().float().numpy()
-  if img.shape[0] == 1:
-    img = np.tile(img, (3, 1, 1))
-  img = (np.transpose(img, (1, 2, 0)) + 1) / 2.0 * 255.0
-  return img.astype(np.uint8)
+# save a set of images as nii.gz files
+def save_imgs(imgs, labels, names, result_dir):
+  os.makedirs(result_dir, exist_ok=True)
 
-# save a set of images
-def save_imgs(imgs, names, path):
-  if not os.path.exists(path):
-    os.mkdir(path)
-  for img, name in zip(imgs, names):
-    img = tensor2img(img)
-    img = Image.fromarray(img)
-    img.save(os.path.join(path, name + '.png'))
+  for img, seg, name in zip(imgs, labels, names):
+    image = sitk.GetImageFromArray(img)
+    # Save the 2D slice as a NIfTI file
+    sitk.WriteImage(image, os.path.join(result_dir, f"{name}.nii.gz"))
+
+    label = sitk.GetImageFromArray(seg)
+    sitk.WriteImage(label, os.path.join(result_dir, f"{name}.nii.gz"))
+
 
 class Saver():
   def __init__(self, opts):
@@ -50,7 +48,7 @@ class Saver():
         self.writer.add_scalar(m, getattr(model, m), total_it)
       # write img
       image_dis = torchvision.utils.make_grid(model.image_display, nrow=model.image_display.size(0)//2)/2 + 0.5
-      self.writer.add_image('Image', image_dis, total_it)
+      self.writer.add_image('Image', torch.Tensor(image_dis), total_it)
 
   # save result images
   def write_img(self, ep, model):

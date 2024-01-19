@@ -3,70 +3,87 @@ import torch.utils.data as data
 from PIL import Image
 from torchvision.transforms import Compose, Resize, RandomCrop, CenterCrop, RandomHorizontalFlip, ToTensor, Normalize
 import random
+import glob
 
+from monai.transforms import (
+    LoadImage,
+    LoadImaged,
+    Compose,
+    EnsureChannelFirst,
+    EnsureChannelFirstd,
+    SqueezeDim,
+    SqueezeDimd,
+    MapLabelValued,
+)
+
+# Dataset for testing
 class dataset_single(data.Dataset):
-  def __init__(self, opts, setname, input_dim):
-    self.dataroot = opts.dataroot
-    images = os.listdir(os.path.join(self.dataroot, opts.phase + setname))
-    self.img = [os.path.join(self.dataroot, opts.phase + setname, x) for x in images]
+  def __init__(self, args, input_dim):
+    self.dataroot = args.data_dir1
+    self.img = sorted(os.listdir(os.path.join(self.dataroot, "images")))
+    self.seg = sorted(os.listdir(os.path.join(self.dataroot, "labels")))
+    self.dataset = [{"img": img, "seg": seg} for img, seg in zip(self.img, self.seg)]
     self.size = len(self.img)
     self.input_dim = input_dim
 
     # setup image transformation
-    transforms = [Resize((opts.resize_size, opts.resize_size), Image.BICUBIC)]
-    transforms.append(CenterCrop(opts.crop_size))
-    transforms.append(ToTensor())
-    transforms.append(Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]))
-    self.transforms = Compose(transforms)
-    print('%s: %d images'%(setname, self.size))
-    return
+    self.transforms = Compose(
+            [
+              LoadImage(),
+              EnsureChannelFirst(),
+              SqueezeDim(dim=-1),
+              #Resize((args.crop_size, args.crop_size)),
+            ])
 
   def __getitem__(self, index):
-    data = self.load_img(self.img[index], self.input_dim)
-    return data
+    img = self.load_img(self.img[index], self.input_dim)
+    seg = LoadImage()(self.seg[index])
+    return img, seg
 
   def load_img(self, img_name, input_dim):
-    img = Image.open(img_name).convert('RGB')
-    img = self.transforms(img)
-    if input_dim == 1:
-      img = img[0, ...] * 0.299 + img[1, ...] * 0.587 + img[2, ...] * 0.114
-      img = img.unsqueeze(0)
+    img = self.transforms(img_name)
+    # if input_dim == 1: 
+    #   img = img[0, ...] * 0.299 + img[1, ...] * 0.587 + img[2, ...] * 0.114
+    #   #img = img.unsqueeze(0)
     return img
 
   def __len__(self):
     return self.size
 
 class dataset_unpair(data.Dataset):
-  def __init__(self, opts):
-    self.dataroot = opts.dataroot
+  def __init__(self, args):
+    # preprocessed/ folder
+    self.data_1 = args.data_dir1
+    self.data_2 = args.data_dir2
 
-    # A
-    images_A = os.listdir(os.path.join(self.dataroot, opts.phase + 'A'))
-    self.A = [os.path.join(self.dataroot, opts.phase + 'A', x) for x in images_A]
+    # A --> take only 18 cases for training
+    train_images_A1 = sorted(glob.glob(os.path.join(self.data_1, "images/case_100*/slice_*.nii.gz"))) 
+    train_images_A2 = sorted(glob.glob(os.path.join(self.data_1, "images/case_101[0-8]/slice_*.nii.gz"))) 
+    
+    self.A = train_images_A1 + train_images_A2
 
-    # B
-    images_B = os.listdir(os.path.join(self.dataroot, opts.phase + 'B'))
-    self.B = [os.path.join(self.dataroot, opts.phase + 'B', x) for x in images_B]
+    # B --> take only 18 cases for training
+    train_images_B1 = sorted(glob.glob(os.path.join(self.data_2, "images/case_100*/slice_*.nii.gz"))) 
+    train_images_B2 = sorted(glob.glob(os.path.join(self.data_2, "images/case_101[0-8]/slice_*.nii.gz"))) 
+
+    self.B = train_images_B1 + train_images_B2
 
     self.A_size = len(self.A)
     self.B_size = len(self.B)
     self.dataset_size = max(self.A_size, self.B_size)
-    self.input_dim_A = opts.input_dim_a
-    self.input_dim_B = opts.input_dim_b
+    self.input_dim_A = args.input_dim_a
+    self.input_dim_B = args.input_dim_b
 
-    # setup image transformation
-    transforms = [Resize((opts.resize_size, opts.resize_size), Image.BICUBIC)]
-    if opts.phase == 'train':
-      transforms.append(RandomCrop(opts.crop_size))
-    else:
-      transforms.append(CenterCrop(opts.crop_size))
-    if not opts.no_flip:
-      transforms.append(RandomHorizontalFlip())
-    transforms.append(ToTensor())
-    transforms.append(Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]))
-    self.transforms = Compose(transforms)
-    print('A: %d, B: %d images'%(self.A_size, self.B_size))
-    return
+    self.transforms = Compose(
+            [
+              LoadImage(),
+              EnsureChannelFirst(),
+              SqueezeDim(dim=-1),
+              #Resize((args.crop_size, args.crop_size)),
+              Normalize(mean=[0.5], std=[0.5]),
+              RandomHorizontalFlip(),
+            ])
+
 
   def __getitem__(self, index):
     if self.dataset_size == self.A_size:
@@ -78,11 +95,12 @@ class dataset_unpair(data.Dataset):
     return data_A, data_B
 
   def load_img(self, img_name, input_dim):
-    img = Image.open(img_name).convert('RGB')
-    img = self.transforms(img)
-    if input_dim == 1:
-      img = img[0, ...] * 0.299 + img[1, ...] * 0.587 + img[2, ...] * 0.114
-      img = img.unsqueeze(0)
+    img = self.transforms(img_name)
+    # if input_dim == 1:
+    #   # again what is this
+    #   img = img[0, ...] * 0.299 + img[1, ...] * 0.587 + img[2, ...] * 0.114
+    #   #img = img.unsqueeze(0) ---> i think
+    
     return img
 
   def __len__(self):

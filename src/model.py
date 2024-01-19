@@ -298,6 +298,7 @@ class DRIT(nn.Module):
     # update G, Ec
     self.enc_c_opt.zero_grad()
     self.gen_opt.zero_grad()
+    self.forward()
     self.backward_G_alone()
     self.enc_c_opt.step()
     self.gen_opt.step()
@@ -396,9 +397,10 @@ class DRIT(nn.Module):
 
     loss_z_L1 = loss_z_L1_a + loss_z_L1_b + loss_G_GAN2_A + loss_G_GAN2_B
     if not self.no_ms:
-      loss_z_L1 += (loss_G_GAN2_A2 + loss_G_GAN2_B2)
-      loss_z_L1 += (loss_lz_AB + loss_lz_BA)
+      loss_z_L1 = loss_z_L1 + (loss_G_GAN2_A2 + loss_G_GAN2_B2)
+      loss_z_L1 = loss_z_L1 + (loss_lz_AB + loss_lz_BA)
     loss_z_L1.backward()
+    
     self.l1_recon_z_loss_a = loss_z_L1_a.item()
     self.l1_recon_z_loss_b = loss_z_L1_b.item()
     if not self.no_ms:

@@ -5,7 +5,7 @@ from model import DRIT
 from saver import Saver
 
 def main():
-  # parse options
+  # parse options from command
   parser = TrainOptions()
   opts = parser.parse()
 
