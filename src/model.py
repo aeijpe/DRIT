@@ -296,9 +296,10 @@ class DRIT(nn.Module):
     self.gen_opt.step()
 
     # update G, Ec
+    self.forward()
+    
     self.enc_c_opt.zero_grad()
     self.gen_opt.zero_grad()
-    self.forward()
     self.backward_G_alone()
     self.enc_c_opt.step()
     self.gen_opt.step()
@@ -369,7 +370,7 @@ class DRIT(nn.Module):
     for out_a in outs_fake:
       outputs_fake = nn.functional.sigmoid(out_a)
       all_ones = torch.ones_like(outputs_fake).cuda(self.gpu)
-      loss_G += nn.functional.binary_cross_entropy(outputs_fake, all_ones)
+      loss_G = loss_G + nn.functional.binary_cross_entropy(outputs_fake, all_ones)
     return loss_G
 
   def backward_G_alone(self):

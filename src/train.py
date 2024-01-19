@@ -30,6 +30,7 @@ def main():
 
   # saver for display and output
   saver = Saver(opts)
+  torch.autograd.set_detect_anomaly(True)
 
   # train
   print('\n--- train ---')

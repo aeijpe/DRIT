@@ -586,7 +586,7 @@ class MisINSResBlock(nn.Module):
     o2 = self.blk1(torch.cat([o1, z_expand], dim=1))
     o3 = self.conv2(o2)
     out = self.blk2(torch.cat([o3, z_expand], dim=1))
-    out += residual
+    out = out + residual
     return out
 
 class GaussianNoiseLayer(nn.Module):
