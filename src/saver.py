@@ -6,17 +6,32 @@ from PIL import Image
 import SimpleITK as sitk
 import torch 
 
+
 # save a set of images as nii.gz files
-def save_imgs(imgs, labels, names, result_dir):
-  os.makedirs(result_dir, exist_ok=True)
+def save_imgs(imgs, labels, origs, names, result_dir, case):
+  # directory
+  result_dir_img = os.path.join(os.path.join(result_dir, "images"), case)
+  os.makedirs(result_dir_img, exist_ok=True)
 
-  for img, seg, name in zip(imgs, labels, names):
-    image = sitk.GetImageFromArray(img)
-    # Save the 2D slice as a NIfTI file
-    sitk.WriteImage(image, os.path.join(result_dir, f"{name}.nii.gz"))
+  result_dir_seg = os.path.join(os.path.join(result_dir, "labels"), case)
+  os.makedirs(result_dir_seg, exist_ok=True)
 
-    label = sitk.GetImageFromArray(seg)
-    sitk.WriteImage(label, os.path.join(result_dir, f"{name}.nii.gz"))
+  result_dir_orig = os.path.join(os.path.join(result_dir, "original"), case)
+  os.makedirs(result_dir_orig, exist_ok=True)
+
+  for img, seg, orig, name in zip(imgs, labels, origs, names):
+    img_reordered = img[0].permute(2, 1, 0)  # Change this based on your data's shape
+    seg_reordered = seg[0].permute(2, 1, 0) 
+    orig_reordered = orig[0].permute(2, 1, 0)
+
+    image = sitk.GetImageFromArray(img_reordered.numpy())
+    sitk.WriteImage(image, os.path.join(result_dir_img, f"{name}.nii.gz"))
+
+    label = sitk.GetImageFromArray(seg_reordered.numpy())
+    sitk.WriteImage(label, os.path.join(result_dir_seg, f"{name}.nii.gz"))
+
+    original_img = sitk.GetImageFromArray(orig_reordered.numpy())
+    sitk.WriteImage(original_img, os.path.join(result_dir_orig, f"{name}.nii.gz"))
 
 
 class Saver():
