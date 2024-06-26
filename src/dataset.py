@@ -1,32 +1,25 @@
 import os
 import torch.utils.data as data
-from PIL import Image
-from torchvision.transforms import Compose, Resize, RandomCrop, CenterCrop, RandomHorizontalFlip, ToTensor, Normalize
+from torchvision.transforms import Compose
 import random
+import itertools
 import glob
 
 from monai.transforms import (
     LoadImage,
-    LoadImaged,
     Compose,
     EnsureChannelFirst,
-    EnsureChannelFirstd,
     SqueezeDim,
-    SqueezeDimd,
-    MapLabelValued,
 )
 
-# Dataset for testing
+# Dataset for testing --> one modality!
 class dataset_single(data.Dataset):
   def __init__(self, args, input_dim, case):
     self.dataroot = args.data_dir1
+    self.data_set_type = args.data_type
     self.img = sorted(glob.glob(os.path.join(os.path.join(os.path.join(self.dataroot, "images"), case), "slice_*.nii.gz")))
     self.seg = sorted(glob.glob(os.path.join(os.path.join(os.path.join(self.dataroot, "labels"), case), "slice_*.nii.gz")))
     
-    # self.img = sorted(glob.glob(os.path.join(self.dataroot, "images/case_1001/slice_*.nii.gz")))
-    # self.seg = sorted(glob.glob(os.path.join(self.dataroot, "labels/case_1001/slice_*.nii.gz")))
-
-
     self.dataset = [{"img": img, "seg": seg} for img, seg in zip(self.img, self.seg)]
     self.size = len(self.img)
     self.input_dim = input_dim
@@ -35,9 +28,6 @@ class dataset_single(data.Dataset):
     self.transforms = Compose(
             [
               LoadImage(),
-              # EnsureChannelFirst(),
-              # SqueezeDim(dim=-1),
-              Normalize(mean=[0.5], std=[0.5]),
             ])
   
     self.transforms_seg = Compose(
@@ -50,6 +40,9 @@ class dataset_single(data.Dataset):
   def __getitem__(self, index):
     img = self.transforms(self.img[index])
     seg = LoadImage()(self.seg[index])
+    if self.data_set_type == "CHAOS":
+      img = img.unsqueeze(0)
+      seg = seg.unsqueeze(0)
     return img, seg
 
   def load_img(self, img_name):
@@ -59,23 +52,23 @@ class dataset_single(data.Dataset):
   def __len__(self):
     return self.size
 
+# Dataset for two modalities without segmentation masks
 class dataset_unpair(data.Dataset):
-  def __init__(self, args):
+  def __init__(self, args, train_cases):
     # preprocessed/ folder
+    print("DATSET: ", args.data_type)
     self.data_1 = args.data_dir1
     self.data_2 = args.data_dir2
+    self.cases = train_cases
+    self.data_set_type = args.data_type
 
-    # A --> take only 18 cases for training unet
-    train_images_A1 = sorted(glob.glob(os.path.join(self.data_1, "images/case_100*/slice_*.nii.gz"))) # "images/case_100*/slice_*.nii.gz"))) 
-    train_images_A2 = sorted(glob.glob(os.path.join(self.data_1, "images/case_101[0-8]/slice_*.nii.gz"))) 
+    self.all_images_1 = sorted(glob.glob(os.path.join(self.data_1, "images/case_*")))
+    images1 = [glob.glob(self.all_images_1[idx]+ "/*.nii.gz") for idx in self.cases]
+    self.A = sorted(list(itertools.chain.from_iterable(images1)))
     
-    self.A = train_images_A1 + train_images_A2
-
-    # B --> take only 18 cases for training unet
-    train_images_B1 = sorted(glob.glob(os.path.join(self.data_2, "images/case_100*/slice_*.nii.gz"))) #"images/case_100*/slice_*.nii.gz"))) 
-    train_images_B2 = sorted(glob.glob(os.path.join(self.data_2, "images/case_101[0-8]/slice_*.nii.gz"))) 
-
-    self.B = train_images_B1 + train_images_B2
+    self.all_images_2 = sorted(glob.glob(os.path.join(self.data_2, "images/case_*")))
+    images2 = [glob.glob(self.all_images_2[idx]+ "/*.nii.gz") for idx in self.cases]
+    self.B = sorted(list(itertools.chain.from_iterable(images2)))
 
     self.A_size = len(self.A)
     self.B_size = len(self.B)
@@ -86,17 +79,23 @@ class dataset_unpair(data.Dataset):
     self.transforms = Compose(
             [
               LoadImage(),
-              Normalize(mean=[0.5], std=[0.5]),
             ])
 
 
   def __getitem__(self, index):
-    if self.dataset_size == self.A_size:
+    if index > (self.B_size - 1):
       data_A = self.load_img(self.A[index])
       data_B = self.load_img(self.B[random.randint(0, self.B_size - 1)])
-    else:
+    elif index > (self.A_size - 1): 
       data_A = self.load_img(self.A[random.randint(0, self.A_size - 1)])
       data_B = self.load_img(self.B[index])
+    else:
+      data_A = self.load_img(self.A[index])
+      data_B = self.load_img(self.B[index])
+
+    if self.data_set_type == "CHAOS":
+      data_A = data_A.unsqueeze(0)
+      data_B = data_B.unsqueeze(0)
     return data_A, data_B
 
   def load_img(self, img_name):

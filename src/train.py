@@ -3,15 +3,30 @@ from options import TrainOptions
 from dataset import dataset_unpair
 from model import DRIT
 from saver import Saver
+import os
 
 def main():
   # parse options from command
   parser = TrainOptions()
   opts = parser.parse()
 
-  # daita loader
+  if opts.cases_folds == 0:
+    train_cases = [2,3,4,5,6,7,8,9,10,11,12,13,14,16,18,19]
+  elif opts.cases_folds == 1:
+    train_cases = [0,1,2,4,6,7,9,10,12,13,14,15,16,17,18,19]
+  elif opts.cases_folds == 2:
+    train_cases = [0,1,3,4,5,6,7,8,9,10,11,12,14,15,17,19]
+  elif opts.cases_folds == 3:
+    train_cases = [0,1,2,3,5,6,7,8,10,11,13,14,15,16,17,18]
+  elif opts.cases_folds == 4:
+    train_cases = [0,1,2,3,4,5,8,9,11,12,13,15,16,17,18,19]
+
+
+  os.environ['CUDA_LAUNCH_BLOCKING']="1"
+  os.environ['TORCH_USE_CUDA_DSA'] = "1"
+  # data loader
   print('\n--- load dataset ---')
-  dataset = dataset_unpair(opts)
+  dataset = dataset_unpair(opts, train_cases)
   train_loader = torch.utils.data.DataLoader(dataset, batch_size=opts.batch_size, shuffle=True, num_workers=opts.nThreads)
 
   # model
@@ -30,7 +45,6 @@ def main():
 
   # saver for display and output
   saver = Saver(opts)
-  torch.autograd.set_detect_anomaly(True)
 
   # train
   print('\n--- train ---')
@@ -62,6 +76,7 @@ def main():
         saver.write_img(-1, model)
         saver.write_model(-1, model)
         break
+      
 
     # decay learning rate
     if opts.n_ep_decay > -1:
@@ -72,8 +87,7 @@ def main():
 
     # Save network weights
     saver.write_model(ep, total_it, model)
-
-  return
+  
 
 if __name__ == '__main__':
   main()

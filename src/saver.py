@@ -5,10 +5,10 @@ import numpy as np
 from PIL import Image
 import SimpleITK as sitk
 import torch 
-
+import nibabel as nib
 
 # save a set of images as nii.gz files
-def save_imgs(imgs, labels, origs, names, result_dir, case):
+def save_imgs_mmwhs(imgs, labels, origs, names, result_dir, case):
   # directory
   result_dir_img = os.path.join(os.path.join(result_dir, "images"), case)
   os.makedirs(result_dir_img, exist_ok=True)
@@ -32,6 +32,29 @@ def save_imgs(imgs, labels, origs, names, result_dir, case):
 
     original_img = sitk.GetImageFromArray(orig_reordered.numpy())
     sitk.WriteImage(original_img, os.path.join(result_dir_orig, f"{name}.nii.gz"))
+
+# save a set of images as nii.gz files
+def save_imgs(imgs, labels, origs, names, result_dir, case):
+  # directory
+  result_dir_img = os.path.join(os.path.join(result_dir, "images"), case)
+  os.makedirs(result_dir_img, exist_ok=True)
+
+  result_dir_seg = os.path.join(os.path.join(result_dir, "labels"), case)
+  os.makedirs(result_dir_seg, exist_ok=True)
+
+  result_dir_orig = os.path.join(os.path.join(result_dir, "original"), case)
+  os.makedirs(result_dir_orig, exist_ok=True)
+
+  for img, seg, orig, name in zip(imgs, labels, origs, names):
+    nifti_image = nib.Nifti1Image(img[0].numpy(), img.meta["affine"].numpy().astype(np.float32))
+    nifti_label = nib.Nifti1Image(seg[0].numpy(), img.meta["affine"].numpy().astype(np.float32))
+    nifti_orig = nib.Nifti1Image(orig[0].numpy(), img.meta["affine"].numpy().astype(np.float32))
+
+    # Save the NIfTI image
+    nib.save(nifti_image, os.path.join(result_dir_img, f"{name}.nii.gz"))
+    nib.save(nifti_label, os.path.join(result_dir_seg, f"{name}.nii.gz"))
+    nib.save(nifti_orig, os.path.join(result_dir_orig, f"{name}.nii.gz"))
+
 
 
 class Saver():

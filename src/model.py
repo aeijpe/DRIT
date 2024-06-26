@@ -340,7 +340,7 @@ class DRIT(nn.Module):
              loss_kl_zc_a + loss_kl_zc_b + \
              loss_kl_za_a + loss_kl_za_b
 
-    loss_G.backward(retain_graph=True)
+    loss_G.backward()
 
     self.gan_loss_a = loss_G_GAN_A.item()
     self.gan_loss_b = loss_G_GAN_B.item()
