@@ -11,10 +11,5 @@ Please refer to the README in the baselines folder in there to understand how to
 
 ## Code structure
 
-<<<<<<< HEAD
-- In `results`, all checkpoints to the DRIT model for the different folds are stored. To load the checkpoints in this folder, please load them from [Huggingface](https://huggingface.co/trustworthy-ai).
+- In `results`, all checkpoints to the DRIT model for the different folds are stored. To load the checkpoints in this folder, please load them from [Huggingface](https://huggingface.co/trustworthy-ai/Cross-Modal-Segmentation).
 - `src` contains the source code for the DRIT model.
-=======
-- In `results`, all checkpoints to the DRIT model for the different folds are stored.
-- `src` contains the source code for the DRIT model.
->>>>>>> 53311b7582eb93d4dcd2f5d31dfd8fd4df939cf1
