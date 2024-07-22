@@ -31,7 +31,7 @@ def main():
   print('Files of cases', nr_cases)
   slice_nr = 0
 
-  result_dir = os.path.join(opts.result_dir, opts.name)
+  result_dir = os.path.join(opts.result_dir, f'run_fold_{opts.cases_folds}')
 
   # model
   print('\n--- load model ---')
@@ -74,6 +74,14 @@ def main():
         save_imgs_mmwhs(imgs, labels, origs, names, result_dir, case)
       else:
         save_imgs(imgs, labels, origs, names, result_dir, case)
+
+  # Create files also for cases that are test cases.
+  # Is done for the inner workings of the second segmentation model. 
+  for case in range(20):
+    result_dir_img = os.path.join(os.path.join(result_dir, "images"), case)
+    os.makedirs(result_dir_img, exist_ok=True)
+    result_dir_seg = os.path.join(os.path.join(result_dir, "labels"), case)
+    os.makedirs(result_dir_seg, exist_ok=True)
      
 
 if __name__ == '__main__':
