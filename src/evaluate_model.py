@@ -6,7 +6,7 @@ from model import DRIT
 from monai.transforms import ScaleIntensity
 from torchmetrics.image.lpip import LearnedPerceptualImagePatchSimilarity 
 import glob
-from utils import set_seed
+from utils import set_seed, get_train_cases
 
 # Evaluate model
 def evaluate(opts, loader):
@@ -26,13 +26,15 @@ def evaluate(opts, loader):
 
     print('\n--- Evaluating ---')
     for idx1, (img_ct, img_mri) in enumerate(loader):
+        # print("in outer loop")
         img_ct = img_ct.cuda()
         img_mri = img_mri.cuda()
         for idx2 in range(opts.num):
+            # print("in inner loop")
             with torch.no_grad():
                 # Get translated images from both domains
-                img_fake_MRI = model.test_forward(img_ct, a2b=1).detach().cpu()
-                img_fake_CT = model.test_forward(img_mri, a2b=0).detach().cpu()
+                img_fake_MRI = model.test_forward(img_ct, a2b=1)
+                img_fake_CT = model.test_forward(img_mri, a2b=0)
                 img_fake_MRI = ScaleIntensity()(img_fake_MRI).detach().cpu()
                 img_fake_CT = ScaleIntensity()(img_fake_CT).detach().cpu()
             
@@ -68,14 +70,16 @@ def main():
     # data loader
     print('\n--- load dataset ---')
     train_cases = get_train_cases(opts)
+    print("TRAIN cases: ", train_cases)
 
     if opts.data_type == 'nnUNet':
+        print("Getting nnunet data")
         dataset = dataset_unpair_nn_pre(opts, train_cases)
     else:
         dataset = dataset_unpair(opts, train_cases)
 
-    train_loader = torch.utils.data.DataLoader(dataset, batch_size=opts.batch_size, shuffle=True, num_workers=opts.nThreads)
-
+    loader = torch.utils.data.DataLoader(dataset, batch_size=1, num_workers=opts.nThreads)
+    print("len loader: ", loader.__len__())
    
     all_metrics_models = []
     all_metrics_lpips_CTT_MRF = []

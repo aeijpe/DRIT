@@ -55,6 +55,8 @@ class TestOptions():
     self.parser = argparse.ArgumentParser()
 
     # data loader related
+    self.parser.add_argument('--splits_dir1', type=str, default='../splits/splits_mmwhs_ct.json', help='path of splits to domain 1')
+    self.parser.add_argument('--splits_dir2', type=str, default='../splits/splits_mmwhs_mri.json', help='path of splits to domain 2')
     self.parser.add_argument('--data_dir1', type=str, default='../../../data/MMWHS/CT_withGT_proc/annotated', help='path of data to domain 1')
     self.parser.add_argument('--data_dir2', type=str, default='../../../data/MMWHS/MR_withGT_proc/annotated', help='path of data to domain 2')
     self.parser.add_argument('--phase', type=str, default='test', help='phase for dataloading')
