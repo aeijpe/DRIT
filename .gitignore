@@ -2,3 +2,5 @@ logs/
 results/
 src/__pycache__/
 jobs/
+run_drit_test.sh
+run_drit.sh
