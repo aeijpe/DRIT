@@ -7,6 +7,8 @@ class TrainOptions():
     # data loader related
     self.parser.add_argument('--data_dir1', type=str, default='../../../data/MMWHS/CT_withGT_proc/', help='path of data to domain 1')
     self.parser.add_argument('--data_dir2', type=str, default='../../../data/MMWHS/MR_withGT_proc/', help='path of data to domain 2')
+    self.parser.add_argument('--splits_dir1', type=str, default='../splits/splits_mmwhs_ct.json', help='path of splits to domain 1')
+    self.parser.add_argument('--splits_dir2', type=str, default='../splits/splits_mmwhs_mri.json', help='path of splits to domain 2')
     self.parser.add_argument('--phase', type=str, default='train', help='phase for dataloading')
     self.parser.add_argument('--batch_size', type=int, default=2, help='batch size')
     self.parser.add_argument('--resize_size', type=int, default=256, help='resized image size for training')
@@ -23,7 +25,7 @@ class TrainOptions():
     self.parser.add_argument('--img_save_freq', type=int, default=50, help='freq (epoch) of saving images')
     self.parser.add_argument('--model_save_freq', type=int, default=50, help='freq (epoch) of saving models')
     self.parser.add_argument('--no_display_img', action='store_true', help='specified if no dispaly')
-    self.parser.add_argument('--data_type', type=str, default='MMWHS', help='Dataset type, opt = MMWHS or chaos')
+    self.parser.add_argument('--data_type', type=str, default='MMWHS', help='Dataset type, opt = MMWHS or chaos or nnUNet')
 
 
     # training related
@@ -57,7 +59,7 @@ class TestOptions():
     self.parser.add_argument('--data_dir2', type=str, default='../../../data/MMWHS/MR_withGT_proc/annotated', help='path of data to domain 2')
     self.parser.add_argument('--phase', type=str, default='test', help='phase for dataloading')
     self.parser.add_argument('--resize_size', type=int, default=256, help='resized image size for training')
-    self.parser.add_argument('--crop_size', type=int, default=216, help='cropped image size for training')
+    # self.parser.add_argument('--crop_size', type=int, default=216, help='cropped image size for training')
     self.parser.add_argument('--nThreads', type=int, default=4, help='for data loader')
     self.parser.add_argument('--input_dim_a', type=int, default=1, help='# of input channels for domain A')
     self.parser.add_argument('--input_dim_b', type=int, default=1, help='# of input channels for domain B')
@@ -74,6 +76,8 @@ class TestOptions():
     self.parser.add_argument('--concat', type=int, default=1, help='concatenate attribute features for translation, set 0 for using feature-wise transform')
     self.parser.add_argument('--no_ms', action='store_true', help='disable mode seeking regularization')
     self.parser.add_argument('--resume', type=str, help='specified the dir of saved models for resume the training')
+
+    self.parser.add_argument('--name_new_ds', type=str, help='specified the dir of saved synthetic data')
     self.parser.add_argument('--gpu', type=int, default=0, help='gpu')
     self.parser.add_argument('--cases_folds', type=int, default=0, help='list of cases for training')
 

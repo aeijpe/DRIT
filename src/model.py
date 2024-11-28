@@ -186,10 +186,10 @@ class DRIT(nn.Module):
     self.fake_B_recon = self.gen.forward_b(self.z_content_recon_b, self.z_attr_recon_b)
 
     # for display
-    self.image_display = torch.cat((self.real_A_encoded[0:1].detach().cpu(), self.fake_B_encoded[0:1].detach().cpu(), \
-                                    self.fake_B_random[0:1].detach().cpu(), self.fake_AA_encoded[0:1].detach().cpu(), self.fake_A_recon[0:1].detach().cpu(), \
-                                    self.real_B_encoded[0:1].detach().cpu(), self.fake_A_encoded[0:1].detach().cpu(), \
-                                    self.fake_A_random[0:1].detach().cpu(), self.fake_BB_encoded[0:1].detach().cpu(), self.fake_B_recon[0:1].detach().cpu()), dim=0)
+    self.image_display = torch.cat((self.normalize_image(self.real_A_encoded[0:1]).detach().cpu(), self.normalize_image(self.fake_B_encoded[0:1]).detach().cpu(), \
+                                    self.normalize_image(self.fake_B_random[0:1]).detach().cpu(), self.normalize_image(self.fake_AA_encoded[0:1]).detach().cpu(), self.normalize_image(self.fake_A_recon[0:1]).detach().cpu(), \
+                                    self.normalize_image(self.real_B_encoded[0:1]).detach().cpu(), self.normalize_image(self.fake_A_encoded[0:1]).detach().cpu(), \
+                                    self.normalize_image(self.fake_A_random[0:1]).detach().cpu(), self.normalize_image(self.fake_BB_encoded[0:1]).detach().cpu(), self.normalize_image(self.fake_B_recon[0:1]).detach().cpu()), dim=0)
 
     # for latent regression
     if self.concat:
@@ -490,5 +490,7 @@ class DRIT(nn.Module):
     row2 = torch.cat((images_b[0:1, ::], images_a1[0:1, ::], images_a2[0:1, ::], images_b4[0:1, ::], images_b3[0:1, ::]),3)
     return torch.cat((row1,row2),2)
 
+  # ONLY for visualizing
   def normalize_image(self, x):
-    return x[:,0:3,:,:]
+    x = (x - x.min()) / (x.max() - x.min())
+    return x

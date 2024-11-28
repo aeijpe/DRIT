@@ -1,11 +1,12 @@
 import torch
 from options import TestOptions
-from dataset import dataset_unpair
+from dataset import dataset_unpair, dataset_unpair_nn_pre
 import os
 from model import DRIT
 from monai.transforms import ScaleIntensity
 from torchmetrics.image.lpip import LearnedPerceptualImagePatchSimilarity 
 import glob
+from utils import set_seed
 
 # Evaluate model
 def evaluate(opts, loader):
@@ -30,8 +31,8 @@ def evaluate(opts, loader):
         for idx2 in range(opts.num):
             with torch.no_grad():
                 # Get translated images from both domains
-                img_fake_MRI = model.test_forward(img_ct, a2b=1)
-                img_fake_CT = model.test_forward(img_mri, a2b=0) 
+                img_fake_MRI = model.test_forward(img_ct, a2b=1).detach().cpu()
+                img_fake_CT = model.test_forward(img_mri, a2b=0).detach().cpu()
                 img_fake_MRI = ScaleIntensity()(img_fake_MRI).detach().cpu()
                 img_fake_CT = ScaleIntensity()(img_fake_CT).detach().cpu()
             
@@ -58,27 +59,23 @@ def evaluate(opts, loader):
 def main():
     parser = TestOptions()
     opts = parser.parse()
+    set_seed(1)
     # CHANGE accordingly
-    dir_model = f"../results/{opts.data_type}_run_fold_{opts.cases_folds}/"
+    dir_model = f"../results/{opts.name}/"
     
     model_list = sorted(glob.glob(os.path.join(dir_model, "*.pth")))
 
-    # Get the folds for the dataset on which the model is trained, to evaluate on
-    if opts.cases_folds == 0:
-        train_cases = [2,3,4,5,6,7,8,9,10,11,12,13,14,16,18,19]
-    elif opts.cases_folds == 1:
-        train_cases = [0,1,2,4,6,7,9,10,12,13,14,15,16,17,18,19]
-    elif opts.cases_folds == 2:
-        train_cases = [0,1,3,4,5,6,7,8,9,10,11,12,14,15,17,19]
-    elif opts.cases_folds == 3:
-        train_cases = [0,1,2,3,5,6,7,8,10,11,13,14,15,16,17,18]
-    elif opts.cases_folds == 4:
-        train_cases = [0,1,2,3,4,5,8,9,11,12,13,15,16,17,18,19]
-
     # data loader
-    print(f'\n--- load dataset: ---')
-    dataset = dataset_unpair(opts, train_cases)
-    loader = torch.utils.data.DataLoader(dataset, batch_size=1, num_workers=opts.nThreads)
+    print('\n--- load dataset ---')
+    train_cases = get_train_cases(opts)
+
+    if opts.data_type == 'nnUNet':
+        dataset = dataset_unpair_nn_pre(opts, train_cases)
+    else:
+        dataset = dataset_unpair(opts, train_cases)
+
+    train_loader = torch.utils.data.DataLoader(dataset, batch_size=opts.batch_size, shuffle=True, num_workers=opts.nThreads)
+
    
     all_metrics_models = []
     all_metrics_lpips_CTT_MRF = []

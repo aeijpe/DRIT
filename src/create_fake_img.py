@@ -1,37 +1,21 @@
 import torch
 from options import TestOptions
-from dataset import dataset_single
+from dataset import dataset_single, dataset_single_nn_pre
 import os
-from saver import save_imgs, save_imgs_mmwhs
+from saver import save_imgs, save_imgs_mmwhs, save_imgs_nnUNet
 from model import DRIT
 from monai.transforms import ScaleIntensity
 from saver import Saver
 import glob
+from utils import set_seed
 
 def main():
   # parse options
   parser = TestOptions()
   opts = parser.parse()
+  set_seed(1)
 
-  # Get the folds for the dataset on which the model is trained, to translate those source images to the target domain
-  if opts.cases_folds == 0:
-    train_cases = [2,3,4,5,6,7,8,9,10,11,12,13,14,16,18,19]
-  elif opts.cases_folds == 1:
-    train_cases = [0,1,2,4,6,7,9,10,12,13,14,15,16,17,18,19]
-  elif opts.cases_folds == 2:
-    train_cases = [0,1,3,4,5,6,7,8,9,10,11,12,14,15,17,19]
-  elif opts.cases_folds == 3:
-    train_cases = [0,1,2,3,5,6,7,8,10,11,13,14,15,16,17,18]
-  elif opts.cases_folds == 4:
-    train_cases = [0,1,2,3,4,5,8,9,11,12,13,15,16,17,18,19]
-
-  all_images = sorted(os.listdir(os.path.join(opts.data_dir1, "images")))
-  nr_cases = [all_images[idx]for idx in train_cases]
-  print("train cases: ", train_cases)
-  print('Files of cases', nr_cases)
-  slice_nr = 0
-
-  result_dir = os.path.join(opts.result_dir, f'run_fold_{opts.cases_folds}')
+  result_dir = os.path.join(opts.result_dir, f'fold_{opts.cases_folds}')
 
   # model
   print('\n--- load model ---')
@@ -41,14 +25,21 @@ def main():
   model.eval()
 
   # For all patients
-  for case in nr_cases:
+  for case in range(20):
     # data loader
     print(f'\n--- load dataset: {case} ---')
-    dataset = dataset_single(opts, opts.input_dim_a, case)
+    if opts.data_type == 'nnUNet':
+        dataset = dataset_single_nn_pre(opts, case)
+    else:
+        dataset = dataset_single(opts, opts.input_dim_a, case)
+
     loader = torch.utils.data.DataLoader(dataset, batch_size=1, num_workers=opts.nThreads)
+
+    
 
     # test
     print('\n--- testing ---')
+    slice_nr = 0
     for idx1, (img1, seg) in enumerate(loader):
       print('{}/{}'.format(idx1, len(loader)))
       img1 = img1.cuda()
@@ -61,27 +52,22 @@ def main():
         with torch.no_grad():
           # get translated image
           img = model.test_forward(img1, a2b=opts.a2b)
-          img = ScaleIntensity()(img)
+
         img = img.detach().cpu()
         imgs.append(img)
         origs.append(orig)
         labels.append(seg)
-        names.append(f'slice_{slice_nr}_{idx2}')
+        names.append(f'{opts.name_new_ds}_{case}x{slice_nr}')
       slice_nr += 1
 
       # save image as nii.gz file
       if opts.data_type == "MMWHS":
         save_imgs_mmwhs(imgs, labels, origs, names, result_dir, case)
+      elif opts.data_type == "nnUNet":
+        # CHECK if this goes correctly!
+        save_imgs_nnUNet(imgs, labels, origs, names, result_dir)
       else:
         save_imgs(imgs, labels, origs, names, result_dir, case)
-
-  # Create files also for cases that are test cases.
-  # Is done for the inner workings of the second segmentation model. 
-  for case in range(20):
-    result_dir_img = os.path.join(os.path.join(result_dir, "images"), case)
-    os.makedirs(result_dir_img, exist_ok=True)
-    result_dir_seg = os.path.join(os.path.join(result_dir, "labels"), case)
-    os.makedirs(result_dir_seg, exist_ok=True)
      
 
 if __name__ == '__main__':
