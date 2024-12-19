@@ -5,6 +5,7 @@ import random
 import itertools
 import glob
 import re
+import numpy as np
 
 from monai.transforms import (
     LoadImage,
@@ -166,10 +167,10 @@ class dataset_unpair_nn_pre(data.Dataset):
     self.cases_1 = train_cases[0]
     self.cases_2 = train_cases[1]
 
-    images1 = [glob.glob(os.path.join(self.data_1, f"nnUNetPlans_2d/{idx}.npy")) for idx in self.cases_1]
+    images1 = [glob.glob(os.path.join(self.data_1, f"nnUNetPlans_2d/{idx}.npz")) for idx in self.cases_1]
     self.A = sorted(list(itertools.chain.from_iterable(images1)))
     
-    images2 = [glob.glob(os.path.join(self.data_2, f"nnUNetPlans_2d/{idx}.npy")) for idx in self.cases_2]
+    images2 = [glob.glob(os.path.join(self.data_2, f"nnUNetPlans_2d/{idx}.npz")) for idx in self.cases_2]
     self.B = sorted(list(itertools.chain.from_iterable(images2)))
 
     self.A_size = len(self.A)
@@ -180,7 +181,6 @@ class dataset_unpair_nn_pre(data.Dataset):
 
     self.transforms = Compose(
             [
-              LoadImage(),
               SqueezeDim(dim=0),
               Resize(spatial_size=(256, 256), mode="bilinear"),
               Transpose(indices=(0, 2, 1))
@@ -201,7 +201,8 @@ class dataset_unpair_nn_pre(data.Dataset):
     return data_A, data_B
 
   def load_img(self, img_name):
-    img = self.transforms(img_name)    
+    data_file = np.load(img_name)['data']
+    img = self.transforms(data_file)    
     return img
 
   def __len__(self):

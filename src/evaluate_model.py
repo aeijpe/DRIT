@@ -19,10 +19,15 @@ def evaluate(opts, loader):
     model.eval()
 
     # Validation metric
-    lpips_alex = LearnedPerceptualImagePatchSimilarity(net_type="squeeze", normalize=True)
+    lpips_alex_CTT_MRF = LearnedPerceptualImagePatchSimilarity(net_type="squeeze", normalize=True)
+    lpips_alex_CT = LearnedPerceptualImagePatchSimilarity(net_type="squeeze", normalize=True)
+    lpips_alex_MRT_CTF = LearnedPerceptualImagePatchSimilarity(net_type="squeeze", normalize=True)
+    lpips_alex_MRI = LearnedPerceptualImagePatchSimilarity(net_type="squeeze", normalize=True)
 
     lpips_list_CTT_MRF = []
+    lpips_list_CT = []
     lpips_list_MRT_CTF = []
+    lpips_list_MRI = []
 
     print('\n--- Evaluating ---')
     for idx1, (img_ct, img_mri) in enumerate(loader):
@@ -48,14 +53,21 @@ def evaluate(opts, loader):
             img_ct_fake_3 = torch.cat((img_fake_CT, img_fake_CT, img_fake_CT), dim=1)            
 
             # Compute LPIPS Metric
-            lpips_list_CTT_MRF.append(lpips_alex(img_ct_3, img_mri_fake_3))
-            lpips_list_MRT_CTF.append(lpips_alex(img_mri_3, img_ct_fake_3))
+            # lpips_list_CTT_MRF.append(lpips_alex_CTT_MRF(img_ct_3, img_mri_fake_3))
+            # lpips_list_MRT_CTF.append(lpips_alex_MRT_CTF(img_mri_3, img_ct_fake_3))
+            lpips_list_CT.append(lpips_alex_CT(img_ct_3, img_ct_fake_3))
+            lpips_list_MRI.append(lpips_alex_MRI(img_mri_3, img_mri_fake_3))
     
     print(f"Model: {opts.resume[-9:]}")
     print('\n--- Evaluation Done ---')
 
     # Return LPIPS for both directions
-    return {"Model": opts.resume[-9:], "lpips_CTT_MRF": torch.mean(torch.stack(lpips_list_CTT_MRF)).item(), "lpips_MRT_CTF": torch.mean(torch.stack(lpips_list_MRT_CTF)).item()}
+    return {"Model": opts.resume[-9:], 
+            # "lpips_CTT_MRF": torch.mean(torch.stack(lpips_list_CTT_MRF)).item(), 
+            # "lpips_MRT_CTF": torch.mean(torch.stack(lpips_list_MRT_CTF)).item(), 
+            "lpips_CT": torch.mean(torch.stack(lpips_list_CT)).item(), 
+            "lpips_MRI": torch.mean(torch.stack(lpips_list_MRI)).item()
+            }
 
 
 def main():
@@ -84,20 +96,26 @@ def main():
     all_metrics_models = []
     all_metrics_lpips_CTT_MRF = []
     all_metrics_lpips_MRT_CTF = []
+    all_metrics_lpips_CT = []
+    all_metrics_lpips_MRI = []
 
     # COmpute metric for all saved models
     for model in model_list:
         opts.resume = model
         res = evaluate(opts, loader)
         all_metrics_models.append(res["Model"])
-        all_metrics_lpips_CTT_MRF.append(res["lpips_CTT_MRF"])
-        all_metrics_lpips_MRT_CTF.append(res["lpips_MRT_CTF"])
+        # all_metrics_lpips_CTT_MRF.append(res["lpips_CTT_MRF"])
+        # all_metrics_lpips_MRT_CTF.append(res["lpips_MRT_CTF"])
+        all_metrics_lpips_CT.append(res["lpips_CT"])
+        all_metrics_lpips_MRI.append(res["lpips_MRI"])
 
     # Print the results 
     # These results are used in the `results folder`!
     print("Models:", all_metrics_models)
     print("squeeze lpips_CTT_MRF:", all_metrics_lpips_CTT_MRF)
     print("squeeze lpips_MRT_CTF:", all_metrics_lpips_MRT_CTF) 
+    print("squeeze lpips_CT:", all_metrics_lpips_CT)
+    print("squeeze lpips_MRI:", all_metrics_lpips_MRI) 
         
 
     
